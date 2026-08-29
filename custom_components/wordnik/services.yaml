@@ -1,0 +1,21 @@
+refresh:
+  name: Refresh
+  description: >-
+    Silently re-fetch today's word for the targeted Wordnik tier(s). Used for
+    error recovery; does not change the word within the same day.
+  target:
+    device:
+      integration: wordnik
+    entity:
+      integration: wordnik
+
+new_word:
+  name: New word
+  description: >-
+    Pick a fresh word right now for the targeted Wordnik tier(s), bypassing the
+    daily schedule.
+  target:
+    device:
+      integration: wordnik
+    entity:
+      integration: wordnik

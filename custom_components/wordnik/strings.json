@@ -1,0 +1,55 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Wordnik Word of the Day",
+        "description": "Enter your Wordnik API key and choose one or more difficulty tiers. Each tier is added as its own device. Re-run setup later to add more tiers.",
+        "data": {
+          "api_key": "Wordnik API key",
+          "tiers": "Difficulty tiers",
+          "rollover_time": "Daily rollover time"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "The Wordnik API key was rejected.",
+      "cannot_connect": "Could not reach the Wordnik API. Please try again."
+    },
+    "abort": {
+      "already_configured": "The selected tier(s) are already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Wordnik options",
+        "data": {
+          "rollover_time": "Daily rollover time",
+          "show_pronunciation": "Show pronunciation sensor",
+          "audio_mode": "Default audio playback",
+          "media_player": "Media player (for casting)",
+          "blocklist": "Word blocklist (comma or newline separated)"
+        }
+      }
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "Refresh",
+      "description": "Silently re-fetch today's word for the targeted tier(s)."
+    },
+    "new_word": {
+      "name": "New word",
+      "description": "Pick a fresh word right now, bypassing the daily schedule."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "word": { "name": "Word" },
+      "definition": { "name": "Definition" },
+      "example": { "name": "Example" },
+      "audio": { "name": "Audio" },
+      "pronunciation": { "name": "Pronunciation" }
+    }
+  }
+}
