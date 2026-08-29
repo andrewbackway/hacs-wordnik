@@ -18,17 +18,12 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import WordnikApiClient, WordnikAuthError, WordnikError
 from .const import (
-    AUDIO_MODE_BROWSER,
-    AUDIO_MODE_MEDIA_PLAYER,
     CONF_API_KEY,
-    CONF_AUDIO_MODE,
     CONF_BLOCKLIST,
-    CONF_MEDIA_PLAYER,
     CONF_ROLLOVER,
     CONF_SHOW_PRONUNCIATION,
     CONF_TIER,
     CONF_TIERS,
-    DEFAULT_AUDIO_MODE,
     DEFAULT_ROLLOVER,
     DEFAULT_SHOW_PRONUNCIATION,
     DOMAIN,
@@ -39,10 +34,6 @@ from .const import (
 _TIER_OPTIONS = [
     selector.SelectOptionDict(value=slug, label=meta["name"])
     for slug, meta in TIERS.items()
-]
-_AUDIO_OPTIONS = [
-    selector.SelectOptionDict(value=AUDIO_MODE_BROWSER, label="In browser"),
-    selector.SelectOptionDict(value=AUDIO_MODE_MEDIA_PLAYER, label="Media player"),
 ]
 
 
@@ -175,23 +166,6 @@ class WordnikOptionsFlow(OptionsFlow):
                         CONF_SHOW_PRONUNCIATION, DEFAULT_SHOW_PRONUNCIATION
                     ),
                 ): selector.BooleanSelector(),
-                vol.Required(
-                    CONF_AUDIO_MODE,
-                    default=options.get(CONF_AUDIO_MODE, DEFAULT_AUDIO_MODE),
-                ): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=_AUDIO_OPTIONS,
-                        mode=selector.SelectSelectorMode.DROPDOWN,
-                    )
-                ),
-                vol.Optional(
-                    CONF_MEDIA_PLAYER,
-                    description={
-                        "suggested_value": options.get(CONF_MEDIA_PLAYER)
-                    },
-                ): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain="media_player")
-                ),
                 vol.Optional(
                     CONF_BLOCKLIST,
                     default=options.get(CONF_BLOCKLIST, ""),

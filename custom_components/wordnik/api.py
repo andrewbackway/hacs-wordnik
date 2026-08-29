@@ -97,3 +97,12 @@ class WordnikApiClient:
             f"/word.json/{quote(word)}/pronunciations", {"limit": "5"}
         )
         return data or []
+
+    async def async_download(self, url: str) -> bytes:
+        """Download raw bytes from a URL (e.g. an audio clip)."""
+        try:
+            async with self._session.get(url) as resp:
+                resp.raise_for_status()
+                return await resp.read()
+        except (ClientError, asyncio.TimeoutError) as err:
+            raise WordnikError(f"Error downloading {url}: {err}") from err

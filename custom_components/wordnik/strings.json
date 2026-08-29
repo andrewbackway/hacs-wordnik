@@ -26,8 +26,6 @@
         "data": {
           "rollover_time": "Daily rollover time",
           "show_pronunciation": "Show pronunciation sensor",
-          "audio_mode": "Default audio playback",
-          "media_player": "Media player (for casting)",
           "blocklist": "Word blocklist (comma or newline separated)"
         }
       }

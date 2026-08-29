@@ -33,6 +33,7 @@ def _api(audio: bool = True) -> AsyncMock:
     )
     api.async_examples.return_value = [{"text": "what serendipity"}]
     api.async_pronunciations.return_value = [{"raw": "ser", "rawType": "IPA"}]
+    api.async_download.return_value = b"ID3-audio-bytes"
     return api
 
 
@@ -51,10 +52,38 @@ async def test_assemble_prefers_word_with_audio(hass: HomeAssistant) -> None:
     assert data["word"] == "serendipity"
     assert data["definition"] == "a happy accident"
     assert data["example"] == "what serendipity"
-    assert data["audio_url"] == "https://a/serendipity.mp3"
+    assert data["audio_source_url"] == "https://a/serendipity.mp3"
+    assert data["audio_url"].startswith(f"/{DOMAIN}/audio/")
+    assert data["audio_url"].endswith("serendipity.mp3")
     assert data["pronunciation"] == "ser"
     assert data["tier_name"] == "Everyday"
     store.async_save.assert_awaited_once()
+
+
+async def test_audio_cached_locally_and_old_files_removed(hass: HomeAssistant) -> None:
+    """A newly picked word's audio is written to disk and stale clips pruned."""
+    import os
+
+    from custom_components.wordnik.const import AUDIO_CACHE_DIRNAME
+
+    entry = _entry()
+    entry.add_to_hass(hass)
+    store = AsyncMock()
+    store.async_load.return_value = None
+
+    cache_dir = hass.config.path(AUDIO_CACHE_DIRNAME)
+    os.makedirs(cache_dir, exist_ok=True)
+    stale = os.path.join(cache_dir, f"{entry.entry_id}_oldword.mp3")
+    with open(stale, "wb") as handle:
+        handle.write(b"old")
+
+    coordinator = WordnikDataUpdateCoordinator(hass, entry, _api(), store, "everyday")
+    data = await coordinator._async_update_data()
+
+    filename = data["audio_url"].rsplit("/", 1)[-1]
+    assert os.path.exists(os.path.join(cache_dir, filename))
+    assert not os.path.exists(stale)
+
 
 
 async def test_stored_word_reused_same_day(hass: HomeAssistant) -> None:

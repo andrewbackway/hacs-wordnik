@@ -252,7 +252,11 @@ class WordnikCard extends HTMLElement {
     }
 
     const audio = this._state(ids.audio);
-    this._audioUrl = audio && audio.state && audio.state.startsWith("http") ? audio.state : null;
+    const audioUrl = audio && audio.state ? audio.state : null;
+    this._audioUrl =
+      audioUrl && (audioUrl.startsWith("http") || audioUrl.startsWith("/"))
+        ? audioUrl
+        : null;
     root.querySelector(".play").disabled = !this._audioUrl;
 
     const attribution = attrs.attribution || (def && def.attributes && def.attributes.attribution) || "Wordnik";
@@ -268,9 +272,13 @@ class WordnikCard extends HTMLElement {
   _playAudio() {
     if (!this._audioUrl) return;
     if (this._config.audio_mode === "media_player" && this._config.media_player) {
+      // Casting needs an absolute URL; local cached clips are served relative.
+      const mediaUrl = this._audioUrl.startsWith("/")
+        ? `${window.location.origin}${this._audioUrl}`
+        : this._audioUrl;
       this._hass.callService("media_player", "play_media", {
         entity_id: this._config.media_player,
-        media_content_id: this._audioUrl,
+        media_content_id: mediaUrl,
         media_content_type: "music",
       });
       return;
@@ -294,6 +302,16 @@ class WordnikCard extends HTMLElement {
   }
 }
 
+const EDITOR_LABELS = {
+  entity: "Word sensor",
+  title: "Title",
+  show_pronunciation: "Show pronunciation",
+  show_example: "Show example",
+  show_new_word: 'Show "New Word" button',
+  audio_mode: "Audio playback",
+  media_player: "Media player",
+};
+
 class WordnikCardEditor extends HTMLElement {
   setConfig(config) {
     this._config = { ...config };
@@ -305,72 +323,74 @@ class WordnikCardEditor extends HTMLElement {
     this._render();
   }
 
-  _wordSensors() {
-    if (!this._hass) return [];
-    return Object.keys(this._hass.states).filter(
-      (id) => id.startsWith("sensor.") && id.endsWith("_word")
-    );
+  connectedCallback() {
+    this._render();
   }
 
-  _emit() {
+  _schema(cfg) {
+    const schema = [
+      {
+        name: "entity",
+        required: true,
+        selector: {
+          entity: { filter: [{ integration: "wordnik", domain: "sensor" }] },
+        },
+      },
+      { name: "title", selector: { text: {} } },
+      { name: "show_pronunciation", selector: { boolean: {} } },
+      { name: "show_example", selector: { boolean: {} } },
+      { name: "show_new_word", selector: { boolean: {} } },
+      {
+        name: "audio_mode",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "browser", label: "In browser" },
+              { value: "media_player", label: "Media player" },
+            ],
+          },
+        },
+      },
+    ];
+    if (cfg.audio_mode === "media_player") {
+      schema.push({
+        name: "media_player",
+        selector: { entity: { domain: "media_player" } },
+      });
+    }
+    return schema;
+  }
+
+  _valueChanged(ev) {
+    ev.stopPropagation();
     this.dispatchEvent(
-      new CustomEvent("config-changed", { detail: { config: this._config } })
+      new CustomEvent("config-changed", { detail: { config: ev.detail.value } })
     );
   }
 
   _render() {
-    if (!this._hass || !this.isConnected) return;
-    const cfg = this._config || {};
-    const options = this._wordSensors()
-      .map(
-        (id) =>
-          `<option value="${id}" ${id === cfg.entity ? "selected" : ""}>${id}</option>`
-      )
-      .join("");
-    this.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:12px;padding:8px 0;">
-        <label>Word sensor
-          <select id="entity" style="width:100%;">
-            <option value="">— select —</option>
-            ${options}
-          </select>
-        </label>
-        <label>Title
-          <input id="title" type="text" style="width:100%;" value="${cfg.title || "Word of the Day"}">
-        </label>
-        <label><input id="show_pronunciation" type="checkbox" ${cfg.show_pronunciation !== false ? "checked" : ""}> Show pronunciation</label>
-        <label><input id="show_example" type="checkbox" ${cfg.show_example !== false ? "checked" : ""}> Show example</label>
-        <label><input id="show_new_word" type="checkbox" ${cfg.show_new_word !== false ? "checked" : ""}> Show "New Word" button</label>
-        <label>Audio playback
-          <select id="audio_mode" style="width:100%;">
-            <option value="browser" ${cfg.audio_mode !== "media_player" ? "selected" : ""}>In browser</option>
-            <option value="media_player" ${cfg.audio_mode === "media_player" ? "selected" : ""}>Media player</option>
-          </select>
-        </label>
-        <label>Media player (for casting)
-          <input id="media_player" type="text" style="width:100%;" value="${cfg.media_player || ""}" placeholder="media_player.living_room">
-        </label>
-      </div>
-    `;
+    if (!this._hass || !this._config || !this.isConnected) return;
 
-    const bind = (id, prop, type) => {
-      const el = this.querySelector(`#${id}`);
-      if (!el) return;
-      el.addEventListener("change", () => {
-        this._config = {
-          ...this._config,
-          [prop]: type === "checkbox" ? el.checked : el.value,
-        };
-        this._emit();
-      });
+    if (!this._form) {
+      this._form = document.createElement("ha-form");
+      this._form.computeLabel = (schema) => EDITOR_LABELS[schema.name] || schema.name;
+      this._form.addEventListener("value-changed", (ev) => this._valueChanged(ev));
+      this.appendChild(this._form);
+    }
+
+    const data = {
+      title: "Word of the Day",
+      show_pronunciation: true,
+      show_example: true,
+      show_new_word: true,
+      audio_mode: "browser",
+      ...this._config,
     };
-    bind("entity", "entity");
-    bind("title", "title");
-    bind("show_pronunciation", "show_pronunciation", "checkbox");
-    bind("show_example", "show_example", "checkbox");
-    bind("show_new_word", "show_new_word", "checkbox");
-    bind("audio_mode", "audio_mode");
-    bind("media_player", "media_player");
+
+    this._form.hass = this._hass;
+    this._form.data = data;
+    this._form.schema = this._schema(data);
   }
 }
 

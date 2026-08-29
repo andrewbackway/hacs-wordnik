@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import re
 from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
@@ -13,6 +15,8 @@ from homeassistant.util import dt as dt_util
 
 from .api import WordnikApiClient, WordnikError
 from .const import (
+    AUDIO_CACHE_DIRNAME,
+    AUDIO_URL_BASE,
     CANDIDATE_LIMIT,
     CONF_BLOCKLIST,
     CONF_ROLLOVER,
@@ -93,10 +97,57 @@ class WordnikDataUpdateCoordinator(DataUpdateCoordinator[dict]):
                 return self._stored["data"]
             raise UpdateFailed(str(err)) from err
 
+        await self._cache_audio(data)
+
         self._force_new = False
         self._stored = {"date": logical, "data": data}
         await self.store.async_save(self._stored)
         return data
+
+    async def _cache_audio(self, data: dict) -> None:
+        """Download the word's audio locally and point the sensor at the copy.
+
+        Wordnik audio fileUrls are signed and expire, so we fetch the clip on
+        each word update, serve it ourselves, and drop this tier's previous
+        cached clip to avoid piling up stale files.
+        """
+        remote_url = data.get("audio_url")
+        if not remote_url:
+            return
+
+        safe_word = re.sub(r"[^a-z0-9]+", "-", (data.get("word") or "").lower()).strip(
+            "-"
+        )
+        filename = f"{self.entry.entry_id}_{safe_word}.mp3"
+        cache_dir = self.hass.config.path(AUDIO_CACHE_DIRNAME)
+        dest = os.path.join(cache_dir, filename)
+
+        try:
+            audio = await self.api.async_download(remote_url)
+        except WordnikError as err:
+            _LOGGER.warning("Could not cache audio for %s: %s", data.get("word"), err)
+            return
+
+        def _write() -> None:
+            os.makedirs(cache_dir, exist_ok=True)
+            prefix = f"{self.entry.entry_id}_"
+            for existing in os.listdir(cache_dir):
+                if existing.startswith(prefix) and existing != filename:
+                    try:
+                        os.remove(os.path.join(cache_dir, existing))
+                    except OSError:
+                        pass
+            with open(dest, "wb") as handle:
+                handle.write(audio)
+
+        try:
+            await self.hass.async_add_executor_job(_write)
+        except OSError as err:
+            _LOGGER.warning("Could not write cached audio for %s: %s", data.get("word"), err)
+            return
+
+        data["audio_source_url"] = remote_url
+        data["audio_url"] = f"{AUDIO_URL_BASE}/{filename}"
 
     async def _assemble(self, logical_date: str) -> dict:
         """Pick a tier-appropriate word and gather its details."""

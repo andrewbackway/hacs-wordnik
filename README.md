@@ -22,7 +22,7 @@ via [HACS](https://hacs.xyz/)) that surfaces a daily **Word of the Day** from th
 
    [![Open your Home Assistant instance and open this repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=andrewbackway&repository=hacs-wordnik&category=integration)
 
-2. Install **Wordnik Word of the Day** and restart Home Assistant.
+2. Install **Wordnik Word of the Day** and **restart Home Assistant**.
 3. Go to **Settings → Devices & Services → Add Integration → Wordnik** (or use the
    button below).
 
@@ -42,7 +42,7 @@ directory and restart Home Assistant, then follow steps 3–4 above.
 
 You'll need a free **Wordnik API key** from
 [developer.wordnik.com](https://developer.wordnik.com/). One key works for every
-tier and device.
+tier and device (for fast access pay for the service, or wait a week).
 
 ### Setup options (Add Integration)
 
@@ -78,15 +78,69 @@ to adjust these independently.
 |--------|---------|-------------|
 | **Daily rollover time** | `00:00:00` | When this tier picks a new word each day. |
 | **Show pronunciation sensor** | On | Adds/removes the pronunciation sensor entity. |
-| **Default audio playback** | In browser | How the card plays word audio: *In browser* or *Media player* (cast). |
-| **Media player (for casting)** | — | Target `media_player` used when audio mode is *Media player*. |
 | **Word blocklist** | — | Comma- or newline-separated words to never pick for this tier. |
 
 ## The card
 
-Add the **Wordnik Word of the Day** card from the card picker and select the tier's
-`… _word` sensor. Options: title, show/hide pronunciation and example, show/hide the
-New Word button, and audio playback in-browser or cast to a `media_player`.
+The `wordnik-card` is bundled with the integration and **auto-registered** as a
+frontend resource — there's nothing to add to your Lovelace resources manually.
+
+To add it to a dashboard:
+
+1. Edit a dashboard → **Add Card** → search for **Wordnik Word of the Day**.
+2. In the visual editor, pick the tier's **`… _word`** sensor as the entity (the
+   card discovers the related definition/example/audio/pronunciation entities
+   automatically).
+3. Adjust the display options, then save.
+
+### Card options
+
+Configurable in the visual editor or in YAML:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `entity` | string | — | **Required.** The tier's `… _word` sensor. |
+| `title` | string | `Word of the Day` | Heading shown above the word. |
+| `show_pronunciation` | boolean | `true` | Show the phonetic pronunciation. |
+| `show_example` | boolean | `true` | Show the example sentence. |
+| `show_new_word` | boolean | `true` | Show the **New Word** button on the card. |
+| `audio_mode` | `browser` \| `media_player` | `browser` | Where audio plays: in the browser or cast to a media player. |
+| `media_player` | string | — | Target `media_player` entity when `audio_mode` is `media_player`. |
+
+Example YAML:
+
+```yaml
+type: custom:wordnik-card
+entity: sensor.wordnik_everyday_word
+title: Word of the Day
+show_pronunciation: true
+show_example: true
+show_new_word: true
+audio_mode: media_player
+media_player: media_player.living_room
+```
+
+### Multiple word levels
+
+Each difficulty tier is its own device with its own set of entities, so you can run
+several **side by side** — for example a **Sprout** card for kids and a **Luminary**
+card for yourself. Add each tier during setup (or re-run **Add Integration** to add
+more later — the API key is pre-filled), then place one card per tier, each pointing
+at that tier's `… _word` sensor:
+
+```yaml
+type: vertical-stack
+cards:
+  - type: custom:wordnik-card
+    entity: sensor.wordnik_sprout_word
+    title: Kids' Word
+  - type: custom:wordnik-card
+    entity: sensor.wordnik_luminary_word
+    title: Advanced Word
+```
+
+Each tier can also be tuned independently via its own **Configure** options
+(rollover time, pronunciation, blocklist).
 
 ## Services
 

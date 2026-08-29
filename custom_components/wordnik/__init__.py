@@ -3,18 +3,25 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import (
+    config_validation as cv,
+    device_registry as dr,
+    entity_registry as er,
+)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.storage import Store
 
 from .api import WordnikApiClient
 from .const import (
+    AUDIO_CACHE_DIRNAME,
+    AUDIO_URL_BASE,
     CONF_API_KEY,
     CONF_TIER,
     DOMAIN,
@@ -30,6 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 
 _CARD_URL = f"/{DOMAIN}/wordnik-card.js"
 _FRONTEND_KEY = f"{DOMAIN}_frontend_registered"
+_AUDIO_KEY = f"{DOMAIN}_audio_registered"
 _SERVICES_KEY = f"{DOMAIN}_services_registered"
 
 
@@ -59,6 +67,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await _async_register_frontend(hass)
+    await _async_register_audio_cache(hass)
     _async_register_services(hass)
     return True
 
@@ -89,6 +98,19 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
     add_extra_js_url(hass, f"{_CARD_URL}?v={VERSION}")
 
 
+async def _async_register_audio_cache(hass: HomeAssistant) -> None:
+    """Ensure the audio cache directory exists and is served over HTTP."""
+    if hass.data.get(_AUDIO_KEY):
+        return
+    hass.data[_AUDIO_KEY] = True
+
+    cache_dir = hass.config.path(AUDIO_CACHE_DIRNAME)
+    await hass.async_add_executor_job(lambda: os.makedirs(cache_dir, exist_ok=True))
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(AUDIO_URL_BASE, cache_dir, False)]
+    )
+
+
 def _async_register_services(hass: HomeAssistant) -> None:
     """Register the refresh and new_word services once."""
     if hass.data.get(_SERVICES_KEY):
@@ -99,11 +121,11 @@ def _async_register_services(hass: HomeAssistant) -> None:
         entry_ids: set[str] = set()
         dev_reg = dr.async_get(hass)
         ent_reg = er.async_get(hass)
-        for device_id in call.data.get("device_id", []):
+        for device_id in cv.ensure_list(call.data.get("device_id")):
             device = dev_reg.async_get(device_id)
             if device:
                 entry_ids.update(device.config_entries)
-        for entity_id in call.data.get("entity_id", []):
+        for entity_id in cv.ensure_list(call.data.get("entity_id")):
             entity = ent_reg.async_get(entity_id)
             if entity and entity.config_entry_id:
                 entry_ids.add(entity.config_entry_id)

@@ -14,22 +14,20 @@ CONF_TIER: Final = "tier"
 CONF_TIERS: Final = "tiers"
 CONF_ROLLOVER: Final = "rollover_time"
 CONF_SHOW_PRONUNCIATION: Final = "show_pronunciation"
-CONF_AUDIO_MODE: Final = "audio_mode"
-CONF_MEDIA_PLAYER: Final = "media_player"
 CONF_BLOCKLIST: Final = "blocklist"
-
-# Audio playback modes
-AUDIO_MODE_BROWSER: Final = "browser"
-AUDIO_MODE_MEDIA_PLAYER: Final = "media_player"
 
 # Defaults
 DEFAULT_ROLLOVER: Final = "00:00:00"
 DEFAULT_SHOW_PRONUNCIATION: Final = True
-DEFAULT_AUDIO_MODE: Final = AUDIO_MODE_BROWSER
 
 # Wordnik API
 API_BASE: Final = "https://api.wordnik.com/v4"
 WORD_URL: Final = "https://www.wordnik.com/words/{word}"
+
+# Local audio cache. Wordnik audio fileUrls are signed and expire, so we
+# download the clip locally on each word update and serve it ourselves.
+AUDIO_CACHE_DIRNAME: Final = f"{DOMAIN}_audio"
+AUDIO_URL_BASE: Final = f"/{DOMAIN}/audio"
 
 # Services
 SERVICE_REFRESH: Final = "refresh"

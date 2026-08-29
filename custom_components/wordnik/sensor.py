@@ -67,6 +67,7 @@ SENSOR_TYPES: tuple[WordnikSensorDescription, ...] = (
         attributes_fn=lambda data: {
             "duration": data.get("audio_duration"),
             "audio": data.get("audio"),
+            "source_url": data.get("audio_source_url"),
         },
     ),
 )
