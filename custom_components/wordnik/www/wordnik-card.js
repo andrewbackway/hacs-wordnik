@@ -299,15 +299,26 @@ class WordnikCard extends HTMLElement {
   _playAudio() {
     if (!this._audioUrl) return;
     if (this._config.audio_mode === "media_player" && this._config.media_player) {
-      // Casting needs an absolute URL; local cached clips are served relative.
-      const mediaUrl = this._audioUrl.startsWith("/")
-        ? `${window.location.origin}${this._audioUrl}`
-        : this._audioUrl;
-      this._hass.callService("media_player", "play_media", {
-        entity_id: this._config.media_player,
-        media_content_id: mediaUrl,
-        media_content_type: "music",
-      });
+      // Casting needs an absolute URL the player can reach; local cached clips
+      // are served relative. hass.hassUrl() honours HA's configured base path
+      // and reverse-proxy prefixes (window.location.origin does not).
+      let mediaUrl = this._audioUrl;
+      if (mediaUrl.startsWith("/")) {
+        mediaUrl =
+          typeof this._hass.hassUrl === "function"
+            ? this._hass.hassUrl(this._audioUrl)
+            : `${window.location.origin}${this._audioUrl}`;
+      }
+      this._hass
+        .callService("media_player", "play_media", {
+          entity_id: this._config.media_player,
+          media_content_id: mediaUrl,
+          media_content_type: "music",
+        })
+        .then(() => this._fireToast(`Casting to ${this._config.media_player}…`))
+        .catch((err) =>
+          this._fireToast(`Couldn't cast audio: ${err.message || err}`)
+        );
       return;
     }
     if (this._audio) {
