@@ -49,6 +49,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = WordnikDataUpdateCoordinator(
         hass, entry, api, store, entry.data[CONF_TIER]
     )
+
+    # Register the bundled card, audio cache and services before the first data
+    # fetch so the frontend resource is always served even if a fetch fails.
+    await _async_register_frontend(hass)
+    await _async_register_audio_cache(hass)
+    _async_register_services(hass)
+
     await coordinator.async_load_stored()
     await coordinator.async_config_entry_first_refresh()
 
@@ -66,9 +73,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    await _async_register_frontend(hass)
-    await _async_register_audio_cache(hass)
-    _async_register_services(hass)
     return True
 
 
