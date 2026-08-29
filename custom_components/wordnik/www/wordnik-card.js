@@ -163,6 +163,13 @@ class WordnikCard extends HTMLElement {
           align-items: center;
           gap: 4px;
         }
+        .new-word:disabled { opacity: 0.6; cursor: default; }
+        .new-word.loading ha-icon {
+          animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
         .unavailable { color: var(--secondary-text-color); }
       </style>
       <ha-card>
@@ -264,9 +271,29 @@ class WordnikCard extends HTMLElement {
     root.querySelector(".attribution").innerHTML =
       `${attribution} · <a href="${url}" target="_blank" rel="noopener">Wordnik</a>`;
 
-    root.querySelector(".new-word").style.display = this._config.show_new_word
-      ? "inline-flex"
-      : "none";
+    const newWordBtn = root.querySelector(".new-word");
+    newWordBtn.style.display = this._config.show_new_word ? "inline-flex" : "none";
+
+    // Clear the loading state once a fresh word arrives.
+    if (this._loading && wordState.state !== this._loadingFrom) {
+      this._setLoading(false);
+    }
+  }
+
+  _setLoading(loading) {
+    this._loading = loading;
+    const root = this.shadowRoot;
+    const btn = root.querySelector(".new-word");
+    const icon = btn.querySelector("ha-icon");
+    const label = btn.querySelector("span");
+    btn.disabled = loading;
+    btn.classList.toggle("loading", loading);
+    icon.setAttribute("icon", loading ? "mdi:loading" : "mdi:shuffle-variant");
+    label.textContent = loading ? "Finding a word…" : "New Word";
+    if (!loading && this._loadingTimeout) {
+      clearTimeout(this._loadingTimeout);
+      this._loadingTimeout = null;
+    }
   }
 
   _playAudio() {
@@ -291,6 +318,17 @@ class WordnikCard extends HTMLElement {
   }
 
   _newWord() {
+    if (this._loading) return;
+
+    const wordState = this._state(this._relatedEntities().word);
+    this._loadingFrom = wordState ? wordState.state : null;
+    this._setLoading(true);
+
+    // Fall back to clearing the state if no new word arrives (e.g. API error).
+    this._loadingTimeout = setTimeout(() => this._setLoading(false), 60000);
+
+    this._fireToast("Conjuring up a fresh word of the day…");
+
     const target = {};
     const deviceId = this._deviceId();
     if (deviceId) {
@@ -298,7 +336,20 @@ class WordnikCard extends HTMLElement {
     } else {
       target.entity_id = this._config.entity;
     }
-    this._hass.callService("wordnik", "new_word", {}, target);
+    this._hass.callService("wordnik", "new_word", {}, target).catch(() => {
+      this._setLoading(false);
+      this._fireToast("Couldn't fetch a new word. Please try again.");
+    });
+  }
+
+  _fireToast(message) {
+    this.dispatchEvent(
+      new CustomEvent("hass-notification", {
+        detail: { message },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 }
 
