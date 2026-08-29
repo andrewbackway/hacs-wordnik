@@ -21,6 +21,9 @@
 .PARAMETER NoPush
     Make the commit and tag locally but do not push.
 
+.PARAMETER NoRelease
+    Push the tag but do not create a GitHub release (requires the gh CLI).
+
 .EXAMPLE
     ./scripts/release.ps1                # 0.1.1 -> 0.1.2
     ./scripts/release.ps1 -Bump minor    # 0.1.1 -> 0.2.0
@@ -32,7 +35,8 @@ param(
     [string]$Bump = "patch",
     [string]$Version,
     [string]$Remote = "origin",
-    [switch]$NoPush
+    [switch]$NoPush,
+    [switch]$NoRelease
 )
 
 $ErrorActionPreference = "Stop"
@@ -118,6 +122,28 @@ Write-Host "Pushing branch '$branch' and tag '$tag' to '$Remote' ..."
 git -C $RepoRoot push $Remote $branch
 git -C $RepoRoot push $Remote $tag
 
+if ($NoRelease) {
+    Write-Host ""
+    Write-Host "Tag pushed. Create the GitHub release manually so HACS offers the update:"
+    Write-Host "  https://github.com/andrewbackway/hacs-wordnik/releases/new?tag=$tag"
+    return
+}
+
+# HACS only offers an update once a *release* (not just a tag) is published.
+$gh = Get-Command gh -ErrorAction SilentlyContinue
+if (-not $gh) {
+    Write-Warning "GitHub CLI (gh) not found; the tag was pushed but no release was created."
+    Write-Host "Install gh (https://cli.github.com) and run:"
+    Write-Host "  gh release create $tag --generate-notes --title $tag"
+    Write-Host "Or create it in the browser:"
+    Write-Host "  https://github.com/andrewbackway/hacs-wordnik/releases/new?tag=$tag"
+    return
+}
+
+Write-Host "Creating GitHub release $tag ..."
+git -C $RepoRoot rev-parse "$tag^{}" > $null 2>&1
+gh release create $tag --repo andrewbackway/hacs-wordnik --title $tag --generate-notes
+
 Write-Host ""
-Write-Host "Done. Now publish a GitHub release for tag $tag so HACS offers the update:"
-Write-Host "  https://github.com/andrewbackway/hacs-wordnik/releases/new?tag=$tag"
+Write-Host "Done. Release $tag published; HACS will offer the update after it refreshes."
+
