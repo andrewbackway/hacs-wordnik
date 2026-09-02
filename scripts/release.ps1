@@ -45,11 +45,16 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $ManifestPath = Join-Path $RepoRoot "custom_components/wordnik/manifest.json"
 $ConstPath = Join-Path $RepoRoot "custom_components/wordnik/const.py"
+$CardPath = Join-Path $RepoRoot "custom_components/wordnik/www/wordnik-card.js"
 
-foreach ($path in @($ManifestPath, $ConstPath)) {
+foreach ($path in @($ManifestPath, $ConstPath, $CardPath)) {
     if (-not (Test-Path $path)) {
         throw "Required file not found: $path"
     }
+}
+
+if (-not (git -C $RepoRoot ls-files --error-unmatch "custom_components/wordnik/www/wordnik-card.js" 2>$null)) {
+    throw "The bundled Lovelace card is not tracked by git: $CardPath"
 }
 
 # Read current version from the manifest.

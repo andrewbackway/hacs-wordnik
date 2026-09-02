@@ -93,9 +93,13 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
     """Serve and register the bundled Lovelace card once."""
     if hass.data.get(_FRONTEND_KEY):
         return
-    hass.data[_FRONTEND_KEY] = True
 
     path = hass.config.path(f"custom_components/{DOMAIN}/www/wordnik-card.js")
+    if not os.path.isfile(path):
+        _LOGGER.error("Bundled Lovelace card is missing: %s", path)
+        return
+
+    hass.data[_FRONTEND_KEY] = True
     await hass.http.async_register_static_paths(
         [StaticPathConfig(_CARD_URL, path, False)]
     )
