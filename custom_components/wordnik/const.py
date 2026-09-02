@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Final
 
 DOMAIN: Final = "wordnik"
-VERSION: Final = "0.1.5"
+VERSION: Final = "0.1.6"
 PLATFORMS: Final = ["sensor"]
 
 # Config / options keys
