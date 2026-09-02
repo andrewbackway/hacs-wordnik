@@ -157,6 +157,20 @@ class WordnikDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             if w.strip()
         }
         candidates = await self.api.async_random_words(profile, CANDIDATE_LIMIT)
+        if not candidates and (profile.get("min_corpus") or profile.get("max_corpus")):
+            relaxed_profile = {
+                key: value
+                for key, value in profile.items()
+                if key not in ("min_corpus", "max_corpus")
+            }
+            _LOGGER.debug(
+                "No candidates returned for %s with corpus filters; retrying without them",
+                self.tier,
+            )
+            candidates = await self.api.async_random_words(
+                relaxed_profile, CANDIDATE_LIMIT
+            )
+        _LOGGER.debug("Wordnik returned %d candidates for tier %s", len(candidates), self.tier)
 
         fallback: dict | None = None
         attempts = 0

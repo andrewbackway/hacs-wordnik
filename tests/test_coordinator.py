@@ -119,3 +119,26 @@ async def test_new_word_bypasses_cache(hass: HomeAssistant) -> None:
 
     assert data["word"] == "serendipity"
     api.async_random_words.assert_called_once()
+
+
+async def test_assemble_retries_without_corpus_filters(hass: HomeAssistant) -> None:
+    """An empty corpus-filtered result is retried with length filters intact."""
+    entry = _entry()
+    entry.add_to_hass(hass)
+    api = _api()
+    api.async_random_words.side_effect = [[], ["serendipity"]]
+    store = AsyncMock()
+    store.async_load.return_value = None
+
+    coordinator = WordnikDataUpdateCoordinator(
+        hass, entry, api, store, "everyday"
+    )
+    data = await coordinator._async_update_data()
+
+    assert data["word"] == "serendipity"
+    assert api.async_random_words.await_count == 2
+    first_profile, second_profile = (
+        call.args[0] for call in api.async_random_words.await_args_list
+    )
+    assert first_profile["min_corpus"] == 50000
+    assert "min_corpus" not in second_profile
