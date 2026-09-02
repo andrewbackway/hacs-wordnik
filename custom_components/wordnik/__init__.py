@@ -41,6 +41,12 @@ _AUDIO_KEY = f"{DOMAIN}_audio_registered"
 _SERVICES_KEY = f"{DOMAIN}_services_registered"
 
 
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up shared Wordnik resources before config entries load."""
+    await _async_register_frontend(hass)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up a Wordnik tier from a config entry."""
     session = async_get_clientsession(hass)
@@ -50,9 +56,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass, entry, api, store, entry.data[CONF_TIER]
     )
 
-    # Register the bundled card, audio cache and services before the first data
-    # fetch so the frontend resource is always served even if a fetch fails.
-    await _async_register_frontend(hass)
+    # Register shared resources before the first data fetch so services and
+    # audio remain available even if a fetch fails.
     await _async_register_audio_cache(hass)
     _async_register_services(hass)
 
