@@ -4,10 +4,17 @@ refresh:
     Silently re-fetch today's word for the targeted Wordnik tier(s). Used for
     error recovery; does not change the word within the same day.
   target:
-    device:
-      integration: wordnik
     entity:
       integration: wordnik
+  fields:
+    device_id:
+      name: Device
+      description: Limit the refresh to a Wordnik device.
+      selector:
+        device:
+          filter:
+            - integration: wordnik
+          multiple: true
 
 new_word:
   name: New word
@@ -15,7 +22,14 @@ new_word:
     Pick a fresh word right now for the targeted Wordnik tier(s), bypassing the
     daily schedule.
   target:
-    device:
-      integration: wordnik
     entity:
       integration: wordnik
+  fields:
+    device_id:
+      name: Device
+      description: Limit the new word request to a Wordnik device.
+      selector:
+        device:
+          filter:
+            - integration: wordnik
+          multiple: true
