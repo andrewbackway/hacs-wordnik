@@ -71,6 +71,31 @@ async def test_assemble_enriches_first_word_with_definition(hass: HomeAssistant)
     store.async_save.assert_awaited_once()
 
 
+async def test_assemble_removes_definition_xref_markup(hass: HomeAssistant) -> None:
+    """Wordnik cross-reference tags are presentation markup, not definition text."""
+    entry = _entry()
+    entry.add_to_hass(hass)
+    store = AsyncMock()
+    store.async_load.return_value = None
+    api = _api()
+    api.async_definitions.return_value = [
+        {
+            "text": "A <xref>radioactive</xref> <xref>isotope</xref>.",
+            "partOfSpeech": "noun",
+        },
+        {"text": "A second definition with <xref>links</xref>.", "partOfSpeech": "noun"},
+    ]
+
+    coordinator = WordnikDataUpdateCoordinator(hass, entry, api, store, "everyday")
+    data = await coordinator._async_update_data()
+
+    assert data["definition"] == "A radioactive isotope."
+    assert data["definitions"] == [
+        "A radioactive isotope.",
+        "A second definition with links.",
+    ]
+
+
 async def test_audio_cached_locally_and_old_files_removed(hass: HomeAssistant) -> None:
     """A newly picked word's audio is written to disk and stale clips pruned."""
     import os

@@ -31,6 +31,13 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+_XREF_TAG_RE = re.compile(r"</?xref>")
+
+
+def _clean_definition(text: str) -> str:
+    """Remove Wordnik's display-only cross-reference markup."""
+    return _XREF_TAG_RE.sub("", text)
+
 
 class WordnikDataUpdateCoordinator(DataUpdateCoordinator[dict]):
     """Coordinate the daily Wordnik word fetch for a single tier."""
@@ -212,8 +219,10 @@ class WordnikDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         return {
             "word": word,
             "part_of_speech": primary.get("partOfSpeech"),
-            "definition": primary.get("text"),
-            "definitions": [d["text"] for d in definitions if d.get("text")],
+            "definition": _clean_definition(primary["text"]),
+            "definitions": [
+                _clean_definition(d["text"]) for d in definitions if d.get("text")
+            ],
             "source_dictionary": primary.get("sourceDictionary"),
             "example": example.get("text") if example else None,
             "examples": [e["text"] for e in examples if e.get("text")],
