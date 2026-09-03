@@ -31,7 +31,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-_XREF_TAG_RE = re.compile(r"</?xref>")
+_XREF_TAG_RE = re.compile(r"</?xref(?:\s[^>]*)?>", re.IGNORECASE)
 
 
 def _clean_definition(text: str) -> str:
@@ -62,6 +62,14 @@ class WordnikDataUpdateCoordinator(DataUpdateCoordinator[dict]):
     async def async_load_stored(self) -> None:
         """Load the persisted word so restarts don't re-pick within a day."""
         self._stored = await self.store.async_load()
+        if self._stored and isinstance(self._stored.get("data"), dict):
+            data = self._stored["data"]
+            for key in ("definition", "definitions"):
+                value = data.get(key)
+                if isinstance(value, list):
+                    data[key] = [_clean_definition(item) for item in value]
+                elif isinstance(value, str):
+                    data[key] = _clean_definition(value)
 
     async def async_request_new_word(self) -> None:
         """Force a fresh word pick, bypassing the daily seed."""

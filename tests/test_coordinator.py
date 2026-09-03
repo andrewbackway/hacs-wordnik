@@ -96,6 +96,30 @@ async def test_assemble_removes_definition_xref_markup(hass: HomeAssistant) -> N
     ]
 
 
+async def test_stored_definition_xref_markup_is_cleaned(hass: HomeAssistant) -> None:
+    """Persisted definitions are cleaned when loaded after an upgrade."""
+    entry = _entry()
+    entry.add_to_hass(hass)
+    store = AsyncMock()
+    api = _api()
+    coordinator = WordnikDataUpdateCoordinator(hass, entry, api, store, "everyday")
+    store.async_load.return_value = {
+        "date": coordinator._logical_date(),
+        "data": {
+            "word": "serendipity",
+            "definition": "A <xref type=\"word\">happy</xref> accident.",
+            "definitions": ["A <XREF>fortunate</XREF> discovery."],
+        },
+    }
+
+    await coordinator.async_load_stored()
+    data = await coordinator._async_update_data()
+
+    assert data["definition"] == "A happy accident."
+    assert data["definitions"] == ["A fortunate discovery."]
+    api.async_definitions.assert_not_awaited()
+
+
 async def test_audio_cached_locally_and_old_files_removed(hass: HomeAssistant) -> None:
     """A newly picked word's audio is written to disk and stale clips pruned."""
     import os
