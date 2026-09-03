@@ -39,6 +39,7 @@ _CARD_URL = f"/{DOMAIN}/wordnik-card.js"
 _FRONTEND_KEY = f"{DOMAIN}_frontend_registered"
 _AUDIO_KEY = f"{DOMAIN}_audio_registered"
 _SERVICES_KEY = f"{DOMAIN}_services_registered"
+CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
