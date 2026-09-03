@@ -172,7 +172,6 @@ class WordnikDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             )
         _LOGGER.debug("Wordnik returned %d candidates for tier %s", len(candidates), self.tier)
 
-        fallback: dict | None = None
         attempts = 0
         for word in candidates:
             if word.lower() in blocklist:
@@ -189,17 +188,10 @@ class WordnikDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             audio = await self.api.async_audio(word)
             examples = await self.api.async_examples(word, EXAMPLES_LIMIT)
             pronunciations = await self.api.async_pronunciations(word)
-
-            data = self._build(
+            return self._build(
                 word, logical_date, primary, definitions, examples, audio, pronunciations
             )
-            if data["audio_url"]:
-                return data
-            if fallback is None:
-                fallback = data
 
-        if fallback is not None:
-            return fallback
         raise WordnikError("No suitable word found for tier")
 
     def _build(

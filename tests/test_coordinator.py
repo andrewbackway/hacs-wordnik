@@ -37,26 +37,37 @@ def _api(audio: bool = True) -> AsyncMock:
     return api
 
 
-async def test_assemble_prefers_word_with_audio(hass: HomeAssistant) -> None:
-    """A word with all data (including audio) is assembled."""
+async def test_assemble_enriches_first_word_with_definition(hass: HomeAssistant) -> None:
+    """The first usable definition wins, even when a later word has audio."""
     entry = _entry()
     entry.add_to_hass(hass)
     store = AsyncMock()
     store.async_load.return_value = None
+    api = _api()
+    api.async_random_words.return_value = ["first", "second"]
+    api.async_audio.return_value = [{"fileUrl": "https://a/first.mp3", "duration": 1}]
+    api.async_definitions.side_effect = [
+        [{"text": "first definition", "partOfSpeech": "noun"}],
+        [{"text": "second definition", "partOfSpeech": "noun"}],
+    ]
 
     coordinator = WordnikDataUpdateCoordinator(
-        hass, entry, _api(), store, "everyday"
+        hass, entry, api, store, "everyday"
     )
     data = await coordinator._async_update_data()
 
-    assert data["word"] == "serendipity"
-    assert data["definition"] == "a happy accident"
+    assert data["word"] == "first"
+    assert data["definition"] == "first definition"
     assert data["example"] == "what serendipity"
-    assert data["audio_source_url"] == "https://a/serendipity.mp3"
+    assert data["audio_source_url"] == "https://a/first.mp3"
     assert data["audio_url"].startswith(f"/{DOMAIN}/audio/")
-    assert data["audio_url"].endswith("serendipity.mp3")
+    assert data["audio_url"].endswith("first.mp3")
     assert data["pronunciation"] == "ser"
     assert data["tier_name"] == "Everyday"
+    api.async_definitions.assert_awaited_once()
+    api.async_audio.assert_awaited_once_with("first")
+    api.async_examples.assert_awaited_once_with("first", 5)
+    api.async_pronunciations.assert_awaited_once_with("first")
     store.async_save.assert_awaited_once()
 
 

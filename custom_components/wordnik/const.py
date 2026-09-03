@@ -37,7 +37,7 @@ SERVICE_NEW_WORD: Final = "new_word"
 STORAGE_VERSION: Final = 1
 
 # Word-selection tuning
-CANDIDATE_LIMIT: Final = 20
+CANDIDATE_LIMIT: Final = 5
 MAX_ASSEMBLE_ATTEMPTS: Final = 10
 DEFINITIONS_LIMIT: Final = 10
 EXAMPLES_LIMIT: Final = 5
