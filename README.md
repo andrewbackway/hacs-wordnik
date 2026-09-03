@@ -104,8 +104,10 @@ Configurable in the visual editor or in YAML:
 | `show_pronunciation` | boolean | `true` | Show the phonetic pronunciation. |
 | `show_example` | boolean | `true` | Show the example sentence. |
 | `show_new_word` | boolean | `true` | Show the **New Word** button on the card. |
-| `audio_mode` | `browser` \| `media_player` | `browser` | Where audio plays: in the browser or cast to a media player. |
-| `media_player` | string | — | Target `media_player` entity when `audio_mode` is `media_player`. |
+| `audio_source` | `wordnik` \| `tts` \| `hidden` | `wordnik` | Use cached Wordnik audio, speak the word with HA TTS, or hide the audio control. |
+| `audio_mode` | `browser` \| `media_player` | `browser` | For Wordnik audio, play in the browser or cast to a media player. Retained for compatibility. |
+| `tts_entity` | string | — | TTS entity used when `audio_source` is `tts`. |
+| `media_player` | string | — | Playback target for Wordnik casting or HA TTS. |
 
 Example YAML:
 
@@ -116,7 +118,8 @@ title: Word of the Day
 show_pronunciation: true
 show_example: true
 show_new_word: true
-audio_mode: media_player
+audio_source: tts
+tts_entity: tts.piper
 media_player: media_player.living_room
 ```
 

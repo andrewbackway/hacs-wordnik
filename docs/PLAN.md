@@ -1,6 +1,6 @@
 # Wordnik "Word of the Day" — Home Assistant Integration Plan
 
-> Status: **DRAFT — awaiting approval. No code until explicitly approved.**
+> Status: **APPROVED — implementation in progress.**
 > Target: Custom Home Assistant integration distributed via HACS, backed by the
 > [Wordnik API](https://developer.wordnik.com/docs), surfaced through a companion
 > Lovelace card.
@@ -279,12 +279,70 @@ Rendered regions:
   `word`, `definition`, `example`, `audio`, and `pronunciation` sensors and their
   attributes. Card config: `entity` (word sensor) or `device_id`, plus display
   toggles (show pronunciation, show example, show New Word button, title).
-- **Audio playback:** clicking play streams the Wordnik audio URL. The target
-  defaults to the integration option (in-browser `<audio>` **or** a chosen
-  `media_player` via `media_player.play_media`), and can be overridden per card.
+- **Audio playback:** clicking the play button follows a card-level audio mode:
+  **Wordnik audio**, **HA TTS**, or **hidden**. Wordnik audio uses the existing
+  locally cached audio URL and can play in the browser or through the selected
+  `media_player`. HA TTS calls Home Assistant's `tts.speak` service with the
+  current word as the message, a configured TTS entity, and a selected
+  `media_player` target. Hidden mode removes the play button and makes no audio
+  service call, including when the Wordnik audio sensor has a value.
+- **Audio configuration:** replace the current `audio_mode: browser | media_player`
+  distinction with an explicit source setting, for example
+  `audio_source: wordnik | tts | hidden`. Keep the existing browser playback
+  behavior as the default destination for Wordnik audio, and retain an optional
+  media-player destination where useful. TTS mode requires both a `tts` entity
+  and a `media_player` entity; the visual editor should only show those fields
+  when TTS is selected and should not allow an incomplete configuration to be
+  saved. The exact field names should be finalized before implementation.
+- **Missing data and failures:** disable the Wordnik play button when Wordnik
+  audio is unavailable; in TTS mode the button remains usable as long as the
+  word sensor has a valid word. Surface a concise toast when a TTS or media
+  player service call fails. Hidden mode must not show an unavailable-audio
+  affordance.
+- **Migration:** existing cards using `audio_mode: browser` continue to play
+  cached Wordnik audio. Existing `audio_mode: media_player` cards continue to
+  cast Wordnik audio. New cards use Wordnik audio as their default source.
+  Decide whether to expose the legacy keys only for YAML compatibility or to
+  normalize them in `setConfig` before the editor renders.
 - **New Word action:** the footer button calls `wordnik.new_word` for this entry,
   then shows the freshly picked word once the coordinator updates.
 - **Loading state:** skeleton/placeholder while the coordinator has no data yet.
+
+### 8.4 HA TTS design details
+- Use the standard `tts.speak` service rather than browser speech synthesis, so
+  the selected Home Assistant TTS provider and media player handle synthesis and
+  playback. Pass the displayed word exactly as the message; do not send the
+  definition or example unless that becomes a separate product option.
+- The card editor should select `tts` entities from the entity registry and
+  `media_player` entities from the media-player domain. A media player is
+  required because `tts.speak` needs a playback target; this also avoids
+  pretending that the browser's local audio element is equivalent to HA TTS.
+- The play handler should stop any active browser audio before invoking TTS,
+  prevent duplicate calls while a request is in flight, and restore the button
+  state after success or failure. Do not make a TTS call automatically on word
+  rollover or card load; synthesis is user initiated.
+- Verify the exact frontend `hass.callService` argument shape against the HA
+  version supported by the integration. The target should identify the TTS
+  entity, while service data should include `media_player_entity_id` and
+  `message`, matching the installed HA TTS service schema.
+
+### 8.5 Implementation and test plan
+1. Define constants and defaults for the three source values, plus the selected
+   TTS and media-player entity keys. Document the new YAML shape and migration
+   behavior in the README.
+2. Update `wordnik-card.js` configuration normalization, editor schema, labels,
+   conditional selectors, button visibility, and button title/icon. Keep the
+   existing Wordnik browser/cast implementation isolated from the new TTS path.
+3. Add a small card test harness or browser test that supplies mocked HA states
+   and `hass.callService`, then verifies Wordnik playback, TTS payload and
+   target, hidden mode, unavailable Wordnik audio, and service failure handling.
+4. Add regression coverage for legacy `audio_mode` configurations and confirm
+   the visual editor does not retain stale TTS/media-player fields after the
+   source changes.
+5. Run the focused card tests, the existing Python test suite, and a manual
+   dashboard check with one Wordnik-audio card, one TTS card, and one hidden
+   card. Confirm that no Wordnik audio download or TTS call is triggered merely
+   by rendering or updating the card.
 - **Error/unavailable state:** if entities are `unavailable`, show a compact
   message and keep the New Word button active.
 - **No-audio words:** play control hidden or greyed with a tooltip.

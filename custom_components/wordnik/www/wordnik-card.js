@@ -29,9 +29,13 @@ class WordnikCard extends HTMLElement {
       show_pronunciation: true,
       show_example: true,
       show_new_word: true,
+      audio_source: "wordnik",
       audio_mode: "browser",
       ...config,
     };
+    if (!config.audio_source) {
+      this._config.audio_source = "wordnik";
+    }
     this._buildStructure();
   }
 
@@ -223,6 +227,7 @@ class WordnikCard extends HTMLElement {
       root.querySelector(".definition").textContent = "";
       root.querySelector(".example").textContent = "";
       root.querySelector(".play").disabled = true;
+      root.querySelector(".play").style.display = "none";
       root.querySelector(".badge").style.display = "none";
       return;
     }
@@ -264,7 +269,15 @@ class WordnikCard extends HTMLElement {
       audioUrl && (audioUrl.startsWith("http") || audioUrl.startsWith("/"))
         ? audioUrl
         : null;
-    root.querySelector(".play").disabled = !this._audioUrl;
+    const playButton = root.querySelector(".play");
+    const audioSource = this._config.audio_source || "wordnik";
+    playButton.style.display = audioSource === "hidden" ? "none" : "inline-flex";
+    playButton.disabled = audioSource === "wordnik" ? !this._audioUrl : !wordState.state;
+    playButton.title = audioSource === "tts" ? "Speak word with Home Assistant TTS" : "Play audio";
+    playButton.querySelector("ha-icon").setAttribute(
+      "icon",
+      audioSource === "tts" ? "mdi:volume-high" : "mdi:play"
+    );
 
     const attribution = attrs.attribution || (def && def.attributes && def.attributes.attribution) || "Wordnik";
     const url = attrs.word_url || `https://www.wordnik.com/words/${encodeURIComponent(wordState.state)}`;
@@ -297,6 +310,34 @@ class WordnikCard extends HTMLElement {
   }
 
   _playAudio() {
+    const wordState = this._state(this._relatedEntities().word);
+    const audioSource = this._config.audio_source || "wordnik";
+    if (audioSource === "hidden" || this._audioRequest || !wordState || !wordState.state) return;
+
+    if (audioSource === "tts") {
+      if (!this._config.tts_entity || !this._config.media_player) {
+        this._fireToast("Choose a TTS entity and media player for TTS audio.");
+        return;
+      }
+      this._audioRequest = this._hass.callService(
+        "tts",
+        "speak",
+        {
+          media_player_entity_id: this._config.media_player,
+          message: wordState.state,
+        },
+        { entity_id: this._config.tts_entity }
+      );
+      this._audioRequest
+        .catch((err) =>
+          this._fireToast(`Couldn't speak word: ${err.message || err}`)
+        )
+        .finally(() => {
+          this._audioRequest = null;
+        });
+      return;
+    }
+
     if (!this._audioUrl) return;
     if (this._config.audio_mode === "media_player" && this._config.media_player) {
       // Casting needs an absolute URL the player can reach; local cached clips
@@ -370,7 +411,9 @@ const EDITOR_LABELS = {
   show_pronunciation: "Show pronunciation",
   show_example: "Show example",
   show_new_word: 'Show "New Word" button',
+  audio_source: "Audio source",
   audio_mode: "Audio playback",
+  tts_entity: "Text-to-speech entity",
   media_player: "Media player",
 };
 
@@ -403,6 +446,21 @@ class WordnikCardEditor extends HTMLElement {
       { name: "show_example", selector: { boolean: {} } },
       { name: "show_new_word", selector: { boolean: {} } },
       {
+        name: "audio_source",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "wordnik", label: "Wordnik audio" },
+              { value: "tts", label: "Home Assistant TTS" },
+              { value: "hidden", label: "Hide audio" },
+            ],
+          },
+        },
+      },
+    ];
+    if (cfg.audio_source === "wordnik") {
+      schema.push({
         name: "audio_mode",
         selector: {
           select: {
@@ -413,13 +471,27 @@ class WordnikCardEditor extends HTMLElement {
             ],
           },
         },
-      },
-    ];
-    if (cfg.audio_mode === "media_player") {
-      schema.push({
-        name: "media_player",
-        selector: { entity: { domain: "media_player" } },
       });
+      if (cfg.audio_mode === "media_player") {
+        schema.push({
+          name: "media_player",
+          selector: { entity: { domain: "media_player" } },
+        });
+      }
+    }
+    if (cfg.audio_source === "tts") {
+      schema.push(
+        {
+          name: "tts_entity",
+          required: true,
+          selector: { entity: { domain: "tts" } },
+        },
+        {
+          name: "media_player",
+          required: true,
+          selector: { entity: { domain: "media_player" } },
+        }
+      );
     }
     return schema;
   }
@@ -446,9 +518,16 @@ class WordnikCardEditor extends HTMLElement {
       show_pronunciation: true,
       show_example: true,
       show_new_word: true,
+      audio_source: "wordnik",
       audio_mode: "browser",
       ...this._config,
     };
+    if (!this._config.audio_source) {
+      data.audio_source = "wordnik";
+    }
+    if (!this._config.audio_source && this._config.audio_mode === "media_player") {
+      data.audio_mode = "media_player";
+    }
 
     this._form.hass = this._hass;
     this._form.data = data;
