@@ -219,21 +219,18 @@ All secrets (API key) stored in the config entry, never logged.
 ## 8. Lovelace Card (polished custom card)
 
 We ship a dedicated custom card, **`wordnik-card`**, as the primary presentation
-layer (no interim markdown/button-card recipe). Because a HACS repository is a
-**single category**, the card is **bundled inside the integration** rather than
-published as a separate HACS plugin: the integration serves the compiled JS from
-`custom_components/wordnik/` and **auto-registers it as a Lovelace module
-resource** at startup. A single HACS “integration” install therefore delivers both
-the backend and the card — no manual resource setup. It remains configurable via
-the standard card picker + visual editor.
+layer (no interim markdown/button-card recipe). The card is published separately
+as the HACS Dashboard repository
+`andrewbackway/hacs-wordnik-card`, while this repository remains the HACS
+integration. HACS installs and registers the frontend card independently, so the
+integration does not inject a frontend module during startup. It remains
+configurable via the standard card picker + visual editor.
 
 ### 8.1 Technology
-- **LitElement + TypeScript**, bundled with **Rollup/esbuild** to a single
-  `wordnik-card.js`, checked into the integration folder
-  (`custom_components/wordnik/www/wordnik-card.js`).
-- The integration registers a static path and adds the module to the frontend
-  (`async_register_static_path` + `frontend.add_extra_js_url` / Lovelace resource),
-  so HACS handles install/versioning of the whole package as one `integration`.
+- **Vanilla JavaScript**, shipped as the root-level `wordnik-card.js` bundle in
+  `andrewbackway/hacs-wordnik-card`.
+- The Dashboard repository's HACS metadata lets HACS register the module as a
+  frontend resource without integration startup timing or manual resource setup.
 - Uses HA theme CSS variables (`--primary-text-color`, `--card-background-color`,
   `--ha-card-border-radius`, etc.) so it inherits the user's theme and dark mode.
 - Ships a **GUI config editor** (`getConfigElement` / `getStubConfig`) so it can

@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import os
 
-from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -33,22 +32,18 @@ from .const import (
     SERVICE_NEW_WORD,
     SERVICE_REFRESH,
     STORAGE_VERSION,
-    VERSION,
 )
 from .coordinator import WordnikDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-_CARD_URL = f"/{DOMAIN}/wordnik-card.js"
-_FRONTEND_KEY = f"{DOMAIN}_frontend_registered"
 _AUDIO_KEY = f"{DOMAIN}_audio_registered"
 _SERVICES_KEY = f"{DOMAIN}_services_registered"
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Set up shared Wordnik resources before config entries load."""
-    await _async_register_frontend(hass)
+    """Set up shared Wordnik resources."""
     return True
 
 
@@ -97,23 +92,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload the entry when options change."""
     await hass.config_entries.async_reload(entry.entry_id)
-
-
-async def _async_register_frontend(hass: HomeAssistant) -> None:
-    """Serve and register the bundled Lovelace card once."""
-    if hass.data.get(_FRONTEND_KEY):
-        return
-
-    path = hass.config.path(f"custom_components/{DOMAIN}/www/wordnik-card.js")
-    if not os.path.isfile(path):
-        _LOGGER.error("Bundled Lovelace card is missing: %s", path)
-        return
-
-    hass.data[_FRONTEND_KEY] = True
-    await hass.http.async_register_static_paths(
-        [StaticPathConfig(_CARD_URL, path, False)]
-    )
-    add_extra_js_url(hass, f"{_CARD_URL}?v={VERSION}")
 
 
 async def _async_register_audio_cache(hass: HomeAssistant) -> None:

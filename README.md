@@ -2,15 +2,16 @@
 
 A custom [Home Assistant](https://www.home-assistant.io/) integration (installable
 via [HACS](https://hacs.xyz/)) that surfaces a daily **Word of the Day** from the
-[Wordnik API](https://developer.wordnik.com/), with a bundled Lovelace card.
+[Wordnik API](https://developer.wordnik.com/). The Lovelace card is distributed
+separately as a HACS Dashboard card.
 
 - Daily word with **definition, example, and audio** (plus pronunciation).
 - **Five difficulty tiers** — Sprout, Explorer, Everyday, Scholar, Luminary — each
   added as its own device so you can run several side by side.
 - Configurable **daily rollover time** (default midnight).
 - **New Word** on demand via the card button or the `wordnik.new_word` service.
-- Polished **`wordnik-card`** Lovelace card, auto-registered — no manual resource
-  setup, with a visual editor.
+- Polished **`wordnik-card`** Lovelace card with a visual editor, installed
+  separately from the [Wordnik Word of the Day Card](https://github.com/andrewbackway/hacs-wordnik-card).
 
 ## Installation
 
@@ -23,12 +24,14 @@ via [HACS](https://hacs.xyz/)) that surfaces a daily **Word of the Day** from th
    [![Open your Home Assistant instance and open this repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=andrewbackway&repository=hacs-wordnik&category=integration)
 
 2. Install **Wordnik Word of the Day** and **restart Home Assistant**.
-3. Go to **Settings → Devices & Services → Add Integration → Wordnik** (or use the
+3. In HACS → Frontend, install the [Wordnik Word of the Day Card](https://github.com/andrewbackway/hacs-wordnik-card)
+  as a Dashboard custom repository. HACS adds its Lovelace resource automatically.
+4. Go to **Settings → Devices & Services → Add Integration → Wordnik** (or use the
    button below).
 
    [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=wordnik)
 
-4. Enter your [Wordnik API key](https://developer.wordnik.com/), pick one or more
+5. Enter your [Wordnik API key](https://developer.wordnik.com/), pick one or more
    tiers, and set the rollover time.
 
 Re-run **Add Integration** later to add more tiers (the API key is pre-filled).
@@ -82,8 +85,9 @@ to adjust these independently.
 
 ## The card
 
-The `wordnik-card` is bundled with the integration and **auto-registered** as a
-frontend resource — there's nothing to add to your Lovelace resources manually.
+The `wordnik-card` is installed separately through HACS as a Dashboard card.
+HACS adds the frontend resource automatically; there is no manual Lovelace
+resource setup.
 
 To add it to a dashboard:
 
