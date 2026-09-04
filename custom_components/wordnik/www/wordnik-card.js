@@ -535,8 +535,12 @@ class WordnikCardEditor extends HTMLElement {
   }
 }
 
-customElements.define("wordnik-card", WordnikCard);
-customElements.define("wordnik-card-editor", WordnikCardEditor);
+if (!customElements.get("wordnik-card")) {
+  customElements.define("wordnik-card", WordnikCard);
+}
+if (!customElements.get("wordnik-card-editor")) {
+  customElements.define("wordnik-card-editor", WordnikCardEditor);
+}
 
 window.customCards = window.customCards || [];
 window.customCards.push({
