@@ -69,7 +69,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hour, minute, second = coordinator._rollover()  # noqa: SLF001
     unsub = async_track_time_change(
         hass,
-        lambda _now: hass.async_create_task(coordinator.async_request_refresh()),
+        lambda _now: hass.add_job(coordinator.async_request_refresh),
         hour=hour,
         minute=minute,
         second=second,
