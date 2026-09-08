@@ -42,6 +42,9 @@
     }
   },
   "entity": {
+    "button": {
+      "new_word": { "name": "New word" }
+    },
     "sensor": {
       "word": { "name": "Word" },
       "definition": { "name": "Definition" },

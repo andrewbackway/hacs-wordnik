@@ -6,7 +6,7 @@ from typing import Final
 
 DOMAIN: Final = "wordnik"
 VERSION: Final = "0.1.16"
-PLATFORMS: Final = ["sensor"]
+PLATFORMS: Final = ["sensor", "button"]
 
 # Config / options keys
 CONF_API_KEY: Final = "api_key"
