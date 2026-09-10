@@ -31,12 +31,12 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-_XREF_TAG_RE = re.compile(r"</?xref(?:\s[^>]*)?>", re.IGNORECASE)
+_DEFINITION_TAG_RE = re.compile(r"</?[^>]+>", re.IGNORECASE)
 
 
 def _clean_definition(text: str) -> str:
-    """Remove Wordnik's display-only cross-reference markup."""
-    return _XREF_TAG_RE.sub("", text)
+    """Remove Wordnik's display-only markup."""
+    return _DEFINITION_TAG_RE.sub("", text)
 
 
 class WordnikDataUpdateCoordinator(DataUpdateCoordinator[dict]):

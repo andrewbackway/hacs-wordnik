@@ -72,7 +72,7 @@ async def test_assemble_enriches_first_word_with_definition(hass: HomeAssistant)
 
 
 async def test_assemble_removes_definition_xref_markup(hass: HomeAssistant) -> None:
-    """Wordnik cross-reference tags are presentation markup, not definition text."""
+    """Wordnik definition tags are presentation markup, not definition text."""
     entry = _entry()
     entry.add_to_hass(hass)
     store = AsyncMock()
@@ -80,10 +80,16 @@ async def test_assemble_removes_definition_xref_markup(hass: HomeAssistant) -> N
     api = _api()
     api.async_definitions.return_value = [
         {
-            "text": "A <xref>radioactive</xref> <xref>isotope</xref>.",
+            "text": (
+                'A <internalXref urlencoded="isotope">radioactive</internalXref> '
+                "<em>isotope</em>."
+            ),
             "partOfSpeech": "noun",
         },
-        {"text": "A second definition with <xref>links</xref>.", "partOfSpeech": "noun"},
+        {
+            "text": "A second definition with <xref>links</xref>.",
+            "partOfSpeech": "noun",
+        },
     ]
 
     coordinator = WordnikDataUpdateCoordinator(hass, entry, api, store, "everyday")
